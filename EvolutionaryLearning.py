@@ -1,67 +1,15 @@
 from keras.models import Sequential
 from keras import optimizers
-from keras.layers.core import Dense, Dropout, Activation, Flatten
-from keras.layers.convolutional import Convolution1D
-from keras.layers.normalization import BatchNormalization
+from keras.layers.core import Dense, Dropout, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.regularizers import l2
 from keras.models import model_from_json
 
-# import other stuff
 import random
 import numpy as np
 import gym
 
-# import os
-# os.environ["THEANO_FLAGS"] = "mode=FAST_RUN,device=gpu,floatX=float32"
-# import theano
 
-class Memory:
-    """
-    This class provides an abstraction to store the [s, a, r, a'] elements of each iteration.
-    Instead of using tuples (as other implementations do), the information is stored in lists 
-    that get returned as another list of dictionaries with each key corresponding to either 
-    "state", "action", "reward", "nextState" or "isFinal".
-    """
-    def __init__(self, size):
-        self.size = size
-        self.currentPosition = 0
-        self.states = []
-        self.actions = []
-        self.rewards = []
-        self.newStates = []
-        self.finals = []
-
-    def getMiniBatch(self, size) :
-        indices = random.sample(np.arange(len(self.states)), min(size,len(self.states)) )
-        miniBatch = []
-        for index in indices:
-            miniBatch.append({'state': self.states[index],'action': self.actions[index], 'reward': self.rewards[index], 'newState': self.newStates[index], 'isFinal': self.finals[index]})
-        return miniBatch
-
-    def getCurrentSize(self) :
-        return len(self.states)
-
-    def getMemory(self, index): 
-        return {'state': self.states[index],'action': self.actions[index], 'reward': self.rewards[index], 'newState': self.newStates[index], 'isFinal': self.finals[index]}
-
-    def addMemory(self, state, action, reward, newState, isFinal) :
-        if (self.currentPosition >= self.size - 1) :
-            self.currentPosition = 0
-        if (len(self.states) > self.size) :
-            self.states[self.currentPosition] = state
-            self.actions[self.currentPosition] = action
-            self.rewards[self.currentPosition] = reward
-            self.newStates[self.currentPosition] = newState
-            self.finals[self.currentPosition] = isFinal
-        else :
-            self.states.append(state)
-            self.actions.append(action)
-            self.rewards.append(reward)
-            self.newStates.append(newState)
-            self.finals.append(isFinal)
-        
-        self.currentPosition += 1
 
 class Agent:
     """
@@ -150,7 +98,7 @@ class Evolution:
                     model.add(Dropout(dropout))
             model.add(Dense(self.output_size, init='lecun_uniform', bias=bias))
             model.add(Activation("linear"))
-        optimizer = optimizers.RMSprop(lr=learningRate, rho=0.9, epsilon=1e-06)
+        optimizer = optimizers.RMSprop(lr=1, rho=0.9, epsilon=1e-06)
         model.compile(loss="mse", optimizer=optimizer)
         return model
 
@@ -175,7 +123,7 @@ class Evolution:
                     model.add(Activation('relu'))
             model.add(Dense(self.output_size, init='lecun_uniform'))
             model.add(Activation("linear"))
-        optimizer = optimizers.RMSprop(lr=1, rho=0.9, epsilon=1e-06)
+        optimizer = optimizers.Adam(lr=1, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
         model.compile(loss="mse", optimizer=optimizer)
         # model.summary()
         return model
@@ -186,12 +134,12 @@ class Evolution:
 
     def updateTargetNetwork(self):
         self.backupNetwork(self.model, self.targetModel)
-
+    '''
     # predict Q values for all the actions
     def getValues(self, state, agent):
         predicted = agent.network.predict(state.reshape(1,len(state)))
         return predicted[0]
-
+    '''
     def getMaxValue(self, values):
         return np.max(values)
 
@@ -239,8 +187,11 @@ class Evolution:
         for t in range(steps):
             if (render):
                 env.render()
-            values = self.getValues(observation, agent)
-            action = self.selectAction(values)
+                model_json = agent.network.to_json()
+                with open("model.json", "w") as json_file:
+                    json_file.write(model_json)
+            values=agent.network.predict(observation.reshape(1,len(observation)))[0]
+            action = self.getMaxIndex(values)#changes
             newObservation, reward, done, info = env.step(action)
             totalReward += reward
             observation = newObservation
@@ -368,7 +319,7 @@ class Evolution:
         the maximum score (defined by self.scoreTarget).
         """
         for e in range(self.epochs):
-            self.updateFitnessValuesForEpoch()
+            self.updateFitness()
             averageFitness = self.calculateAverageFitness()
             print ("Epoch",e,"average fitness: ",averageFitness)
             bestAgents = self.selectBest()
@@ -382,7 +333,7 @@ class Evolution:
             else:
                 print ("Best agent average: ",bestAgentAverage)
             bestAgents[0].setFitness(bestAgentAverage)
-            # self.run_simulation(self.env, bestAgents[0] , self.steps, render = True)
+            self.run_simulation(self.env, bestAgents[0] , self.steps, render = True)
             if(bestAgentAverage<averageFitness):
                 self.mutate2(bestAgents[0])
             self.createNewPopulation(bestAgents)
@@ -398,11 +349,11 @@ class Evolution:
             count += 1
         return total / count
 
-    def updateFitnessValuesForEpoch(self):
+    def updateFitness(self):
         """
         run a number of simulations (nr_rounds_per_epoch) for each agent and determine their fitness (average score)
         by simply running the simulation.
-        No learning happens in this step.
+        Learning occurs here
         """        
         agentScores = [0] * self.nr_agents
         for r in range(self.nr_rounds_per_epoch):
@@ -418,12 +369,13 @@ class Evolution:
 
 #env = gym.make('CartPole-v1')
 env=gym.make('Assault-ram-v0')
+#env=gym.make('Acrobot-v1')
 epochs = 100
 steps = 800
 
-scoreTarget = 50
+scoreTarget = 350
 # inputs, outputs, nr_rounds to determine fitness, env, max steps per episode, nr epochs, score target
 evolution = Evolution(len(env.observation_space.high), env.action_space.n, 5, env, steps, epochs, scoreTarget)
 # number of agents and hidden layer sizes in array
-evolution.initAgents(100, [200, 5])#30 30 works for cartpole
+evolution.initAgents(100, [30, 30])#30 30 works for cartpole
 evolution.evolve()
