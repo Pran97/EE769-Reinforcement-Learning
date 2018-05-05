@@ -1,8 +1,8 @@
 #Resources used https://github.com/LinuxIsCool/756project/blob/master/CartPole/CartPoleES.py 
-#and https://nathanrooy.github.io/posts/2017-11-30/evolving-simple-organisms-using-a-genetic-algorithm-and-deep-learning/
-#
+# https://nathanrooy.github.io/posts/2017-11-30/evolving-simple-organisms-using-a-genetic-algorithm-and-deep-learning/
+#and https://gist.github.com/wingedsheep/426e847e193d79c67e052a856d495338
 # For theory on https://blog.openai.com/evolution-strategies/ and https://dzone.com/articles/beating-atari-games-with-openais-evolutionary-stra
-# I have mainly relied on these resources to understand the concept and since I was familiar with Keras self implemented it
+# Implementation if fairly simplified because of keras, I have modeified most of the code and kept it as simple as possible
 from keras.models import Sequential
 from keras import optimizers
 from keras.layers.core import Dense, Activation
