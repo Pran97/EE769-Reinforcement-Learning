@@ -24,7 +24,7 @@ class GeneticEvolution:
         self.steps = steps
         self.epochs = epochs
         self.scoreTarget = scoreTarget
-   
+   #Initalizes all the population to random weigted neural networks
     def initAgents(self, nr_agents, hiddenLayers):
         self.nr_agents = nr_agents
         self.agents = [None] * nr_agents
@@ -35,7 +35,7 @@ class GeneticEvolution:
             model = self.create(self.input_size, self.output_size, hiddenLayers, "relu")
             agent.setNetwork(model)
             self.agents[i] = agent
-
+  #Model of neural network created using Sequential() of keras
     def create(self, inputs, outputs, hiddenLayers, activationType):
         model = Sequential()
         if len(hiddenLayers) == 0: 
@@ -61,6 +61,8 @@ class GeneticEvolution:
         model.compile(loss="mse", optimizer=optimizer)
         # model.summary()
         return model
+    #Keras allows us to access the weights of the models simplifying our jobs. Crossover basically means a child with wieghts as a
+    #mixture of the two parents
     def crossover(self, agent1, agent2):
         weightLayerList = []
         for i in range(len(self.hiddenLayers)):
@@ -114,7 +116,7 @@ class GeneticEvolution:
 
 
     
-        
+       #Modify the weight of a single network by adding noise to it
     def mutate(self, agent1):
         new_weights = agent1.network.get_weights()
         weightLayerList = []
@@ -138,7 +140,7 @@ class GeneticEvolution:
         selectionNr = int(self.nr_agents / 2)
         selectedAgents = self.agents[:selectionNr]
         return selectedAgents
-
+#Replace all killed spawns with new children using the crossover and mutation function
     def createNewPopulation(self, bestAgents):
         print ("create new pop")
         newPopulation = bestAgents
@@ -163,7 +165,7 @@ class GeneticEvolution:
             newPopulation.append(child)
         self.agents = newPopulation
         print('new population created')
-
+#To ensure stability ofour model before applying the stopping criterion
     def tryAgent(self, agent, nr_episodes):
         total = 0
         for i in range(nr_episodes):
@@ -196,7 +198,7 @@ class GeneticEvolution:
             if(bestAgentAverage<averageFitness):
                 self.mutate2(bestAgents[0])
             self.createNewPopulation(bestAgents)
-
+#Fitness is a measure of avg. rewards of our agent
     def calculateAverageFitness(self):
         """
         Simply iterate over th agents and return the average fitness va
