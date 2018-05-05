@@ -1,3 +1,7 @@
+#Resources used- https://github.com/lazyprogrammer/machine_learning_examples/blob/master/rl2/cartpole/q_learning.py
+#I have taken the body of the code from here modified and implemented a custom back propoagation(this is the brain of the code) in order to implement TD gammon with state action
+#Value function Q(s,a) (Note in the paper they had implemented it on state value function V(s) I have made a modification here)
+#
 import gym
 import numpy as np
 import matplotlib.pyplot as plt
